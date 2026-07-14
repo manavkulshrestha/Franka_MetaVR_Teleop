@@ -7,8 +7,8 @@ import time
 from polymetis import RobotInterface, GripperInterface
 import numpy as np
 
-from femtomega_helpers import init_camera, get_rgb, print_cameras
-import cv2
+from src.femtomega_helpers import init_camera, get_rgb, print_cameras
+from util.io import yaml_to_dict
 
 HOME_Q = np.array([0, -np.pi/4, 0, -3*np.pi/4, 0, np.pi/2, np.pi/4])
 GRIPPER_SPEED = 0.1
@@ -31,13 +31,13 @@ def build_request(*, external_rgb: np.ndarray, wrist_rgb: np.ndarray,
     }
 
 
-def main(ctrl_period: float = 1/20, angled45: bool = True,
-         model_host: str = '10.168.4.52', model_port: int = 8000, *,
-         ext_cam_sn: str = 'CL25854009Y', wrs_cam_sn: str = 'CL2E453000Y', prompt: str = 'pick up the black box',
+def main(ctrl_period: float = 1/20, angled45: bool = True, *,
+         model_host: str, model_port: int, dry_run: bool = True,
+         ext_cam_sn: str, wrs_cam_sn: str, prompt: str = 'pick up the black box',
          open_loop_horizon: int = 8, qdot_scale: float = 0.15, max_qdot_rad_s: float = 0.25, gripper_threshold: float = 0.5):
     assert not torch.cuda.is_available(), 'currently cuda not supported. ideas2 drivers are messed up'
     robot = RobotInterface(ip_address='localhost')
-    gripper = GripperInterface(ip_address="localhost")
+    gripper = GripperInterface(ip_address='localhost')
     policy = WebsocketClientPolicy(model_host, model_port)
 
     joint1_offt = -np.pi/4 if angled45 else 0
@@ -50,6 +50,7 @@ def main(ctrl_period: float = 1/20, angled45: bool = True,
 
     action_chunk = None
     action_index = 0
+    is_grasping = False
     try:
         while True:
             if action_chunk is None or action_index >= min(open_loop_horizon, len(action_chunk)):
@@ -78,12 +79,16 @@ def main(ctrl_period: float = 1/20, angled45: bool = True,
             qdot = np.clip(qdot, -max_qdot_rad_s, max_qdot_rad_s)
             gripper_grasp = float(action[7]) > gripper_threshold
 
-            print(f'dry-run qdot={np.array2string(qdot, precision=3)} grasp?={gripper_grasp}')
-            # robot.update_desired_joint_velocities(torch.tensor(qdot))
-            # if gripper_grasp:
-            #     gripper.grasp(speed=GRIPPER_SPEED, force=GRIPPER_FORCE, blocking=False)
-            # else:
-            #     gripper.goto(GRIPPER_OPEN_WIDTH, speed=GRIPPER_SPEED, force=GRIPPER_FORCE, blocking=False)
+            if dry_run:
+                print(f'dry-run qdot={np.array2string(qdot, precision=3)} grasp?={gripper_grasp}')
+            else:
+                robot.update_desired_joint_velocities(torch.tensor(qdot))
+                if gripper_grasp and not is_grasping:
+                    gripper.grasp(speed=GRIPPER_SPEED, force=GRIPPER_FORCE, blocking=False)
+                    is_grasping = True
+                elif not gripper_grasp and is_grasping:
+                    gripper.goto(GRIPPER_OPEN_WIDTH, speed=GRIPPER_SPEED, force=GRIPPER_FORCE, blocking=False)
+                    is_grasping = False
 
             time.sleep(ctrl_period)
     finally:
@@ -91,12 +96,7 @@ def main(ctrl_period: float = 1/20, angled45: bool = True,
 
 
 if __name__ == '__main__':
-    Fire(main)
-
-    # cam = init_camera('CL2E453000Y')
-    # while True:
-    #     rgb = get_rgb(cam)
-    #     cv2.imshow("RGB", rgb[::2, ::2, ::-1])
-    #     if cv2.waitKey(1) & 0xFF == ord('q'):
-    #         break
-    # cam.stop()
+    def cli(config_path: str = 'args.yaml', **kwargs):
+        config_kwargs = yaml_to_dict(config_path)
+        return main(**(config_kwargs | kwargs))
+    Fire(cli)

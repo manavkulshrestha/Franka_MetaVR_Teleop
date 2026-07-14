@@ -3,7 +3,7 @@ import torch
 from fire import Fire
 import time
 from polymetis import RobotInterface, GripperInterface
-from transform import get_transform, transform_vector
+from src.transform import get_transform, transform_vector
 from vr_franka import FrankaVR
 import numpy as np
 from scipy.spatial.transform import Rotation as R
