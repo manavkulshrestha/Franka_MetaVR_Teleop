@@ -50,7 +50,6 @@ def main(ctrl_period: float = 1/20, angled45: bool = True, gripper_cmd_tol: floa
                 pos = torch.tensor(transform_vector(default_T_modified, state['ee_pos']))
                 orn = torch.tensor((R_default_R_modified * R.from_quat(state['ee_orn'])).as_quat())
 
-                print(state['grasp'])
                 if state["grasp"] and not grasped:
                     gripper.grasp(
                         speed=GRIPPER_SPEED,

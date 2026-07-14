@@ -69,7 +69,7 @@ class FrankaVR:
 
 def main():
     """Main function to test the MetaQuestReader."""
-    # from pybullet_franka import FrankaEnv, create_visual_cube
+    from src.pybullet_franka import FrankaEnv, create_visual_cube
     env = FrankaEnv()
     vri = FrankaVR(get_base_T_ee=lambda: env.base_T_ee())
 

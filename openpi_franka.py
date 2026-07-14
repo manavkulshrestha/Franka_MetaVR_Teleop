@@ -20,7 +20,8 @@ def build_request(*, external_rgb: np.ndarray, wrist_rgb: np.ndarray,
                   q: np.ndarray, gripper_pos: float, prompt: str,
                   angled45_correction: bool = True) -> dict:
     if angled45_correction:
-        q = q+(np.pi/4, *([0]*(len(q)-1)))
+        q = q.copy()
+        q[0] += np.pi/4
     
     return {
         "observation/exterior_image_1_left": image_tools.resize_with_pad(external_rgb, 224, 224),
@@ -32,8 +33,8 @@ def build_request(*, external_rgb: np.ndarray, wrist_rgb: np.ndarray,
 
 
 def main(ctrl_period: float = 1/20, angled45: bool = True, *,
-         model_host: str, model_port: int, dry_run: bool = True,
-         ext_cam_sn: str, wrs_cam_sn: str, prompt: str = 'pick up the black box',
+         model_host: str, model_port: int, real: bool = False,
+         ext_cam_sn: str, wrs_cam_sn: str, prompt: str = 'pick up the box',
          open_loop_horizon: int = 8, qdot_scale: float = 0.15, max_qdot_rad_s: float = 0.25, gripper_threshold: float = 0.5):
     assert not torch.cuda.is_available(), 'currently cuda not supported. ideas2 drivers are messed up'
     robot = RobotInterface(ip_address='localhost')
@@ -70,7 +71,7 @@ def main(ctrl_period: float = 1/20, angled45: bool = True, *,
                 if action_chunk.ndim != 2 or action_chunk.shape[1] != 8:
                     raise RuntimeError(f'Expected action chunk [horizon, 8], got {action_chunk.shape}')
                 action_index = 0
-                print(f'Received action chunk shape={action_chunk.shape}')
+                # print(f'Received action chunk shape={action_chunk.shape}')
 
             action = action_chunk[action_index]
             action_index += 1
@@ -79,9 +80,7 @@ def main(ctrl_period: float = 1/20, angled45: bool = True, *,
             qdot = np.clip(qdot, -max_qdot_rad_s, max_qdot_rad_s)
             gripper_grasp = float(action[7]) > gripper_threshold
 
-            if dry_run:
-                print(f'dry-run qdot={np.array2string(qdot, precision=3)} grasp?={gripper_grasp}')
-            else:
+            if real:
                 robot.update_desired_joint_velocities(torch.tensor(qdot))
                 if gripper_grasp and not is_grasping:
                     gripper.grasp(speed=GRIPPER_SPEED, force=GRIPPER_FORCE, blocking=False)
@@ -89,6 +88,8 @@ def main(ctrl_period: float = 1/20, angled45: bool = True, *,
                 elif not gripper_grasp and is_grasping:
                     gripper.goto(GRIPPER_OPEN_WIDTH, speed=GRIPPER_SPEED, force=GRIPPER_FORCE, blocking=False)
                     is_grasping = False
+            else:
+                print(f'dry-run qdot={np.array2string(qdot, precision=3)} grasp?={gripper_grasp}')
 
             time.sleep(ctrl_period)
     finally:
