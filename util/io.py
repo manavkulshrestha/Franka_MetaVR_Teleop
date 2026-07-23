@@ -20,4 +20,4 @@ def available_version(parent: Path) -> int:
     }
 
     smallest_available = next(n for n in count(0) if n not in used)
-    return smallest_available
+    return str(smallest_available)

@@ -16,7 +16,7 @@ from scipy.spatial.transform import Rotation as R
 from util.transform import get_transform, transform_vector
 
 from numpydantic import NDArray, Shape as S
-from my_typing import Vec3, Vec4, Vec7, Mat4x4, number
+from src.my_typing import Vec3, Vec4, Vec7, Mat4x4, number
 
 
 class FrankaEnv:

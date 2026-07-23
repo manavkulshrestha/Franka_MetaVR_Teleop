@@ -4,7 +4,7 @@ from fire import Fire
 import time
 from polymetis import RobotInterface, GripperInterface
 from src.femtomega import FemtoMega
-from my_typing import Mat4x4
+from src.my_typing import Mat4x4
 from util.transform import get_transform, transform_vector
 from vr_franka import FrankaVR
 import numpy as np
@@ -13,6 +13,8 @@ import threading
 from pathlib import Path
 import json
 from PIL import Image
+from util.io import available_version
+from tqdm import tqdm
 
 HOME_Q = np.array([0, -np.pi/4, 0, -3*np.pi/4, 0, np.pi/2, np.pi/4])
 GRIPPER_SPEED = 0.1
@@ -23,28 +25,47 @@ GRIPPER_OPEN_WIDTH = 0.08
 def record_data(cameras: list[FemtoMega], robot: RobotInterface, gripper: GripperInterface, joint1_offt: float,
                 save_period: float, save_dir: Path, stop_recording: threading.Event) -> None:
     tp1 = time.perf_counter()
-    counter = 0
+    # counter = 0
+    # maybe move the directory ensuring here
+
+    samples = []
     
     while not stop_recording.is_set():
         t = time.time()
         rgbs = {cam.serial_number: cam.get_rgb() for cam in cameras}
         robot_state, gripper_state = robot.get_robot_state(), gripper.get_state()
-        joint_pos = robot_state.joint_positions
+        joint_pos = np.array(robot_state.joint_positions)
         joint_pos[0] -= joint1_offt
 
-        with open(save_dir/f'{counter}.json', 'w') as f:
-            json.dump({
+        samples.append({
+            'robot': {
                 'timestamp': t,
                 'joint_pos': joint_pos.tolist(),
-                'joint_vel': robot_state.joint_velocities.tolist(),
+                'joint_vel': np.array(robot_state.joint_velocities).tolist(),
                 'gripper_width': gripper_state.width,
-            }, f)
-        for sn, rgb in rgbs.items():
-            Image.fromarray(rgb).save(save_dir/sn/f'{counter}.png')
+            },
+            'images': rgbs,
+        })
+
+        # with open(save_dir/f'robot/{counter}.json', 'w') as f:
+        #     json.dump({
+        #         'timestamp': t,
+        #         'joint_pos': joint_pos.tolist(),
+        #         'joint_vel': np.array(robot_state.joint_velocities).tolist(),
+        #         'gripper_width': gripper_state.width,
+        #     }, f, indent=4)
+        # for sn, rgb in rgbs.items():
+        #     Image.fromarray(rgb).save(save_dir/sn/f'{counter}.png')
 
         tp1 += save_period
-        counter += 1
+        # counter += 1e
         stop_recording.wait(max(0, tp1 - time.perf_counter()))
+
+    for i, sample in enumerate(tqdm(samples, desc='Saving recorded data')):
+        with open(save_dir/f'robot/{i}.json', 'w') as f:
+            json.dump(sample['robot'], f)
+        for sn, rgb in sample['images'].items():
+            Image.fromarray(rgb).save(save_dir/sn/f'{i}.png')
 
 
 def base_T_ee(robot: RobotInterface, R_modified_R_default: R, modified_T_default: Mat4x4) -> Mat4x4:
@@ -58,6 +79,8 @@ def main(cam_serial_numbers: list[str]|None = None, *, save_dir: str, ctrl_perio
     assert not torch.cuda.is_available(), 'currently cuda not supported. ideas2 drivers are messed up'
     cam_serial_numbers = FemtoMega.connected_serial_numbers() if cam_serial_numbers is None else cam_serial_numbers
     save_dir = Path(save_dir)
+    save_dir.mkdir(parents=True, exist_ok=True)
+    save_dir = save_dir/available_version(save_dir)
 
     # initialize robot and gripper interfaces
     robot = RobotInterface(ip_address='localhost')
@@ -83,7 +106,7 @@ def main(cam_serial_numbers: list[str]|None = None, *, save_dir: str, ctrl_perio
     stop_recording = threading.Event()
     recording_thread = threading.Thread(
         target=record_data,
-        args=(cameras, robot, gripper, joint1_offt, ctrl_period, save_dir, stop_recording),
+        args=(cameras, robot, gripper, joint1_offt, 1/20, save_dir, stop_recording),
     )
 
     # initialize VR interface
@@ -115,15 +138,18 @@ def main(cam_serial_numbers: list[str]|None = None, *, save_dir: str, ctrl_perio
                 elif not state["grasp"] and grasped:
                     gripper.goto(GRIPPER_OPEN_WIDTH, speed=GRIPPER_SPEED, force=GRIPPER_FORCE, blocking=False)
                     grasped = False
+                elif state["exit"]:
+                    print('Stopping tele-operation...')
+                    break
             robot.update_desired_ee_pose(pos, orn)
 
             time.sleep(ctrl_period)
     finally:
         stop_recording.set()
-        recording_thread.join()
-        robot.terminate_current_policy()
         for cam in cameras:
             cam.close()
+        recording_thread.join()
+        robot.terminate_current_policy()
 
 
 if __name__ == '__main__':

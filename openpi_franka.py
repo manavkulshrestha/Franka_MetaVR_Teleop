@@ -36,7 +36,7 @@ def build_request(*, wrist_rgb: np.ndarray, left_rgb: np.ndarray, right_rgb: np.
 
 def main(ctrl_period: float = 1/20, angled45: bool = True, *,
          model_host: str, model_port: int, real: bool = False,
-         left_cam_sn: str, right_cam_sn: str|None = None, wrist_cam_sn: str, prompt: str = 'pick up the box',
+         left_cam_sn: str, right_cam_sn: str|None = None, wrist_cam_sn: str, prompt: str = 'pick up the banana',
          open_loop_horizon: int = 8, qdot_scale: float = 0.15, max_qdot_rad_s: float = 0.25, gripper_threshold: float = 0.5):
     assert not torch.cuda.is_available(), 'currently cuda not supported. ideas2 drivers are messed up'
     robot = RobotInterface(ip_address='localhost')

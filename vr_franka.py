@@ -6,7 +6,7 @@ from scipy.spatial.transform import Rotation as R
 
 from typing import Callable
 
-from my_typing import Mat4x4, Vec3, Vec4
+from src.my_typing import Mat4x4, Vec3, Vec4
 
 
 class FrankaVR:
@@ -60,6 +60,7 @@ class FrankaVR:
                 'ee_orn': orn,
                 'gripper_width': width,
                 'grasp': buttons['RG'] | buttons['RTr'],
+                'exit': buttons['B'],
             }
             
         self.prev_A = cur_A
