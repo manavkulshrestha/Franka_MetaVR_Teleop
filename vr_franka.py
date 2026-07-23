@@ -6,10 +6,11 @@ from scipy.spatial.transform import Rotation as R
 
 from typing import Callable
 
+from my_typing import Mat4x4, Vec3, Vec4
+
 
 class FrankaVR:
-    # def __init__(self, get_base_T_ee: Callable[[], np.ndarray], base_T_vr: np.ndarray|None = None):
-    def __init__(self, get_base_T_ee: Callable, base_T_vr: np.ndarray = None):
+    def __init__(self, get_base_T_ee: Callable[[], Mat4x4], base_T_vr: Mat4x4|None = None):
         self.quest_reader = MetaQuestReader()
         self.get_base_T_ee = get_base_T_ee
         self.base_T_vr = np.array([
@@ -25,8 +26,7 @@ class FrankaVR:
 
         self.controller_initialized = False
 
-    # def get_robot_state(self) -> None|dict[str, np.ndarray|float]:
-    def get_robot_state(self) -> dict:
+    def get_robot_state(self) -> None|dict[str, Vec3|Vec4|float|bool]:
         poses, buttons = self.quest_reader.get_transformations_and_buttons()
         if not len(poses) or not len(buttons):
             return None
@@ -68,8 +68,8 @@ class FrankaVR:
 
 
 def main():
-    """Main function to test the MetaQuestReader."""
-    from src.pybullet_franka import FrankaEnv, create_visual_cube
+    # Known issue: franka env simulation is broken for gripper opening/closing
+    from src.pybullet_franka import FrankaEnv
     env = FrankaEnv()
     vri = FrankaVR(get_base_T_ee=lambda: env.base_T_ee())
 

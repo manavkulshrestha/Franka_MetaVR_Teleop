@@ -1,6 +1,6 @@
 import cv2
 from fire import Fire
-from src.femtomega_helpers import get_rgb, init_camera
+from femtomega import get_rgb, init_camera
 from util.io import yaml_to_dict
 from typing import Literal
 

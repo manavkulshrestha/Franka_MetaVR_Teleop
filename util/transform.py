@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from src.my_typing import Vec3, Vec4, Mat3x3, Mat4x4
+from my_typing import Vec3, Vec4, Mat3x3, Mat4x4
 
 def get_transform(quat: Vec4|None = None, rot_mat: Mat3x3|None = None, rpy: Vec3|None = None,
                   degrees: bool = True,

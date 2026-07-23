@@ -13,10 +13,10 @@ import pybullet_data
 import time
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from src.transform import get_transform, transform_vector
+from util.transform import get_transform, transform_vector
 
 from numpydantic import NDArray, Shape as S
-from src.my_typing import Vec3, Vec4, Vec7, Mat4x4, number
+from my_typing import Vec3, Vec4, Vec7, Mat4x4, number
 
 
 class FrankaEnv:

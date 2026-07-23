@@ -12,7 +12,7 @@ from fire import Fire
 
 from src.pybullet_franka import FrankaEnv, create_visual_sphere, box_corners, axis_aligned_bbox, draw_box
 
-from src.my_typing import Vec3
+from my_typing import Vec3
 
 
 def find_link(robot: int, name: str) -> int:
