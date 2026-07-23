@@ -7,7 +7,7 @@ import time
 from polymetis import RobotInterface, GripperInterface
 import numpy as np
 
-from femtomega import FemtoMega, init_camera, get_rgb, print_cameras
+from src.femtomega import FemtoMega
 from util.io import yaml_to_dict
 
 HOME_Q = np.array([0, -np.pi/4, 0, -3*np.pi/4, 0, np.pi/2, np.pi/4])

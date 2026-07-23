@@ -6,7 +6,7 @@ from pyorbbecsdk import Pipeline, AlignFilter, PointCloudFilter, OBStreamType, O
 
 from numpydantic import NDArray, Shape as S
 from typing import Callable, Literal, TypeAlias
-from my_typing import number
+from src.my_typing import number
 
 
 RGBImage: TypeAlias = NDArray[S['* h, * w, 3 c'], number]
