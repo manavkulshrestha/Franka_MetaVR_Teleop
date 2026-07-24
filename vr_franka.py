@@ -1,6 +1,6 @@
 import time
 from meta_quest_teleop.reader import MetaQuestReader
-import pybullet as p
+# import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
@@ -59,7 +59,7 @@ class FrankaVR:
                 'ee_pos': pos,
                 'ee_orn': orn,
                 'gripper_width': width,
-                'grasp': buttons['RG'] | buttons['RTr'],
+                'grasp': width < 0.04,
                 'exit': buttons['B'],
             }
             
@@ -71,6 +71,7 @@ class FrankaVR:
 def main():
     # Known issue: franka env simulation is broken for gripper opening/closing
     from src.pybullet_franka import FrankaEnv
+    import pybullet as p
     env = FrankaEnv()
     vri = FrankaVR(get_base_T_ee=lambda: env.base_T_ee())
 

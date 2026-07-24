@@ -6,8 +6,11 @@ from pyorbbecsdk import Pipeline, AlignFilter, PointCloudFilter, OBStreamType, O
 
 from numpydantic import NDArray, Shape as S
 from typing import Callable, Literal, TypeAlias
-from src.my_typing import number
-# from my_typing import number
+
+try:
+    from src.my_typing import number
+except ModuleNotFoundError as e:
+    from my_typing import number
 
 
 RGBImage: TypeAlias = NDArray[S['* h, * w, 3 c'], number]

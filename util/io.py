@@ -12,12 +12,15 @@ def yaml_to_dict(path: str) -> dict:
             print(f'Error parsing YAML file: {e}')
 
 
-def available_version(parent: Path) -> int:
-    used = {
-        int(item.name)
-        for item in parent.iterdir()
-        if item.is_dir() and item.name.isdigit()
-    }
+def versioned_dir(parent: Path) -> Path:
+    try:
+        used = {
+            int(item.name)
+            for item in parent.iterdir()
+            if item.is_dir() and item.name.isdigit()
+        }
+    except FileNotFoundError:
+        return parent/'0'
 
     smallest_available = next(n for n in count(0) if n not in used)
-    return str(smallest_available)
+    return parent/str(smallest_available)
