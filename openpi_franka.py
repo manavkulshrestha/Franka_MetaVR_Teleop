@@ -18,14 +18,21 @@ GRIPPER_OPEN_WIDTH = 0.08
 
 def build_request(*, wrist_rgb: np.ndarray, left_rgb: np.ndarray, right_rgb: np.ndarray|None,
                   q: np.ndarray, gripper_pos: float, prompt: str,
-                  angled45_correction: bool = True) -> dict:
+                  angled45_correction: bool = True, policy_config: str|None = None) -> dict:
     if angled45_correction:
         q = q.copy()
         q[0] += np.pi/4
+
+    if policy_config == 'real_franka_finetuned':
+        exterior_image_key = 'observation/exterior_image'
+        wrist_image_key = 'observation/wrist_image'
+    else:
+        exterior_image_key = 'observation/exterior_image_1_left'
+        wrist_image_key = 'observation/wrist_image_left'
     
     req = {
-        'observation/exterior_image_1_left': image_tools.resize_with_pad(left_rgb, 224, 224),
-        'observation/wrist_image_left': image_tools.resize_with_pad(wrist_rgb, 224, 224),
+        exterior_image_key: image_tools.resize_with_pad(left_rgb, 224, 224),
+        wrist_image_key: image_tools.resize_with_pad(wrist_rgb, 224, 224),
         'observation/joint_position': q.astype(np.float32),
         'observation/gripper_position': np.asarray([1 - gripper_pos/GRIPPER_OPEN_WIDTH], dtype=np.float32),
         'prompt': prompt,
@@ -37,7 +44,8 @@ def build_request(*, wrist_rgb: np.ndarray, left_rgb: np.ndarray, right_rgb: np.
 def main(ctrl_period: float = 1/20, angled45: bool = True, *,
          model_host: str, model_port: int, real: bool = False,
          left_cam_sn: str, right_cam_sn: str|None = None, wrist_cam_sn: str, prompt: str = 'pick up the banana',
-         open_loop_horizon: int = 8, qdot_scale: float = 0.15, max_qdot_rad_s: float = 0.25, gripper_threshold: float = 0.5):
+         policy_config: str|None = None, open_loop_horizon: int = 8, qdot_scale: float = 0.15,
+         max_qdot_rad_s: float = 0.25, gripper_threshold: float = 0.5):
     assert not torch.cuda.is_available(), 'currently cuda not supported. ideas2 drivers are messed up'
     robot = RobotInterface(ip_address='localhost')
     gripper = GripperInterface(ip_address='localhost')
@@ -69,6 +77,7 @@ def main(ctrl_period: float = 1/20, angled45: bool = True, *,
                     gripper_pos=gripper.get_state().width,
                     prompt=prompt,
                     angled45_correction=angled45,
+                    policy_config=policy_config,
                 )
 
                 response = policy.infer(request)
@@ -106,3 +115,9 @@ if __name__ == '__main__':
         config_kwargs = yaml_to_dict(config_path)
         return main(**(config_kwargs | kwargs))
     Fire(cli)
+'''
+python /home/bera/franka_teleop/openpi_franka.py \
+      --left_cam_sn=CL25854009Y \
+      --policy_config=real_franka_finetuned \
+      --real=True
+'''
